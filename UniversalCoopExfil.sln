@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PMCCoop", "PMCCoop.csproj", "{1B060111-F8D6-492B-895F-76919E6D3EEA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniversalCoopExfil", "UniversalCoopExfil.csproj", "{1B060111-F8D6-492B-895F-76919E6D3EEA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

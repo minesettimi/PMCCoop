@@ -4,9 +4,9 @@ using EFT.Interactive;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 
-namespace PMCCoop
+namespace UniversalCoopExfil
 {
-    [BepInPlugin("com.minesettimi.pmccoop", "PMCCoop", "1.0.0")]
+    [BepInPlugin("com.minesettimi.coopexfil", "UniversalCoopExfil", "1.0.0")]
     public class Plugin : BaseUnityPlugin
     {
         private void Awake()

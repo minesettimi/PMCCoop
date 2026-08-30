@@ -8,9 +8,9 @@
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
         <Version>1.0.0</Version>
-        <RootNamespace>PMCCoop</RootNamespace>
+        <RootNamespace>UniversalCoopExfil</RootNamespace>
 
-        <AssemblyName>PMCCoop</AssemblyName>
+        <AssemblyName>UniversalCoopExfil</AssemblyName>
         <OutputPath>bin\$(Configuration)\$(SolutionName)\$(AssemblyName)\</OutputPath>
         <GamePath>$(SolutionDir)../../BepInEx/plugins/</GamePath>
         <RewardPath>$(SolutionDir)release/BepInEx/plugins/</RewardPath>
