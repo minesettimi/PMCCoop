@@ -1,76 +1,83 @@
-﻿using System.Reflection;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Logging;
+using Comfort.Common;
+using CommonAssets.Scripts.Game;
 using EFT.Interactive;
-using HarmonyLib;
+using Fika.Core.Main.Components;
+using Fika.Core.Main.GameMode;
+using Fika.Core.Main.Players;
+using Fika.Core.Main.Utils;
+using Fika.Core.Modding;
+using Fika.Core.Modding.Events;
+using Fika.Core.Networking;
 using SPT.Reflection.Patching;
 
 namespace UniversalCoopExfil
 {
     [BepInPlugin("com.minesettimi.coopexfil", "UniversalCoopExfil", "1.0.0")]
+    [BepInDependency("com.fika.core")]
     public class Plugin : BaseUnityPlugin
     {
         public static ConfigEntry<bool> StickyAccess = null!;
+        public static ManualLogSource PluginLogger = null!;
+        public static PatchManager PatchManager = null!;
         
         private void Awake()
         {
-            new ScavCooperationPatch().Enable();
-            new ScavCooperationMetPatch().Enable();
+            PatchManager = new PatchManager(this, true);
+            PatchManager.EnablePatches();
 
+            PluginLogger = Logger;
+            
             StickyAccess = Config.Bind("Coop Exfil Settings", "Sticky Access", true,
                 "If enabled, the exfil point will stay open after the conditions are first met.");
-        }
-    }
-
-    public class ScavCooperationPatch : ModulePatch
-    {
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(ScavCooperationRequirement),
-                nameof(ScavCooperationRequirement.UpdateStatus));
-        }
-        
-        [PatchPrefix]
-        public static bool Prefix(ExfiltrationPoint point, ScavCooperationRequirement __instance)
-        {
-            if (!Plugin.StickyAccess.Value)
-            {
-                point.SetStatusLogged(point.Entered.Count > 1 ? EExfiltrationStatus.Countdown : EExfiltrationStatus.UncompleteRequirements, "CooperationRequirement");
-                return false;
-            }
             
-            if (point._status == EExfiltrationStatus.RegularMode)
-                return false;
-            
-            if (point.Entered.Count > 1)
-            {
-                point.SetStatusLogged(EExfiltrationStatus.RegularMode, "CooperationRequirement");
-                __instance._unbind.Invoke();
-            }
-            else
-            {
-                point.SetStatusLogged(EExfiltrationStatus.UncompleteRequirements, "CooperationRequirement");
-            }
-            
-            return false;
-        }
-    }
-    
-    public class ScavCooperationMetPatch : ModulePatch
-    {
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(ScavCooperationRequirement), nameof(ScavCooperationRequirement.Met));
+            FikaEventDispatcher.SubscribeEvent<FikaNetworkManagerCreatedEvent>(OnNetworkManagerCreated);
         }
 
-        [PatchPrefix]
-        public static bool Prefix(ExfiltrationPoint point, ref bool __result)
+        private void OnNetworkManagerCreated(FikaNetworkManagerCreatedEvent @event)
         {
-            if (!Plugin.StickyAccess.Value)
-                return true;
+            switch (@event.Manager)
+            {
+                case FikaClient client:
+                    client.RegisterPacket<ExfilEnteredPacket>(HandleExfilEntered);
+                    break;
+                case FikaServer server:
+                    server.RegisterPacket<ExfilEnteredPacket>(HandleExfilEntered);
+                    break;
+            }
+        }
+
+        private void HandleExfilEntered(ExfilEnteredPacket packet)
+        {
+            CoopHandler coopHandler = FikaBackendUtils.IsClient
+                ? Singleton<FikaClient>.Instance.CoopHandler
+                : Singleton<FikaServer>.Instance.CoopHandler;
+                
+            if (!coopHandler.Players.TryGetValue(packet.NetId, out FikaPlayer? player))
+            {
+                return;
+            }
+
+            foreach (ExfiltrationPoint exfilPoint in ExfiltrationController.Instance.ExfiltrationPoints)
+            {
+                if (exfilPoint.Settings.Name != packet.Name)
+                    return;
+
+                if (packet.Entered)
+                {
+                    exfilPoint.Entered.Add(player);
+                }
+                else
+                {
+                    exfilPoint.Entered.Remove(player);
+                }
+
+                break;
+            }
+
             
-            __result = point.Status == EExfiltrationStatus.RegularMode;
-            return false;
         }
     }
 }

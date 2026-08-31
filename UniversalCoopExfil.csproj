@@ -41,6 +41,7 @@
         <Reference Include="UnityEngine.CoreModule" HintPath="..\..\EscapeFromTarkov_Data\Managed\UnityEngine.CoreModule.dll" />
         <Reference Include="UnityEngine.InputLegacyModule" HintPath="..\..\EscapeFromTarkov_Data\Managed\UnityEngine.InputLegacyModule.dll" />
         <Reference Include="UnityEngine.TextRenderingModule" HintPath="..\..\EscapeFromTarkov_Data\Managed\UnityEngine.TextRenderingModule.dll" />
+        <Reference Include="Fika.Core" HintPath="..\..\BepInEx\plugins\Fika\Fika.Core.dll" />
     </ItemGroup>
 
 </Project>
