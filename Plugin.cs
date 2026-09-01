@@ -13,19 +13,16 @@ using UnityEngine;
 
 namespace UniversalCoopExfil
 {
-    [BepInPlugin("com.minesettimi.coopexfil", "UniversalCoopExfil", "1.0.0")]
+    [BepInPlugin("com.minesettimi.coopexfil", "UniversalCoopExfil", "1.0.1")]
     public class Plugin : BaseUnityPlugin
     {
         public static ConfigEntry<bool> StickyAccess = null!;
         public static PatchManager PatchManager = null!;
-        public static ManualLogSource PluginLogger = null!;
         
         private void Awake()
         {
             PatchManager = new PatchManager(this, true);
             PatchManager.EnablePatches();
-
-            PluginLogger = Logger;
 
             StickyAccess = Config.Bind("Coop Exfil Settings", "Sticky Access", true,
                 "If enabled, the exfil point will stay open after the conditions are first met.");
@@ -49,7 +46,7 @@ namespace UniversalCoopExfil
                 return false;
             }
             
-            if (point._status == EExfiltrationStatus.RegularMode)
+            if (point.Status != EExfiltrationStatus.UncompleteRequirements)
                 return false;
             
             if (point.Entered.Count > 1)
@@ -76,56 +73,33 @@ namespace UniversalCoopExfil
         [PatchPrefix]
         public static bool Prefix(ExfiltrationPoint point, ref bool __result)
         {
-            if (!Plugin.StickyAccess.Value)
-                return true;
-            
-            __result = point.Status == EExfiltrationStatus.RegularMode;
+            __result = point.Status != EExfiltrationStatus.UncompleteRequirements;
             return false;
         }
     }
 
-    public class ExfiltrationPointEnterPatch : ModulePatch
+    public class ExfiltrationPointInfilMatchPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(ExfiltrationPoint), "IPhysicsTrigger.OnTriggerEnter");
+            return AccessTools.Method(typeof(SharedExfiltrationPoint), nameof(SharedExfiltrationPoint.InfiltrationMatch));
         }
 
         [PatchPrefix]
-        public static bool Prefix(Collider col, ExfiltrationPoint __instance)
+        public static bool Prefix(Player player, ref bool __result)
         {
-            GameWorld instance = Singleton<GameWorld>.Instance;
-            Player? playerByCollider = instance.GetPlayerByCollider(col);
-            if (playerByCollider == null)
+            GameWorld? instance = Singleton<GameWorld>.Instance;
+            if (instance == null)
             {
-                Plugin.PluginLogger.LogError("Failed to get player by collider.");
-                return false;
-            }
-
-            if ((instance.BtrController != null && instance.BtrController.BtrVehicle != null && instance.BtrController.BtrVehicle.IsPassenger(playerByCollider, out BTRPassenger _)) || playerByCollider.BtrState == EPlayerBtrState.Inside)
-            {
-                Plugin.PluginLogger.LogError("Player is in BTR.");
-                return false;
+                return true;
             }
             
-            if (ExfiltrationController.Instance.BannedPlayers.Contains(playerByCollider.Id))
+            if (player.IsYourPlayer)
             {
-                Plugin.PluginLogger.LogError("Player is banned.");
-                return false;
+                return true;
             }
-            if (!__instance.InfiltrationMatch(playerByCollider))
-            {
-                Plugin.PluginLogger.LogError("Player doesn't have infiltration match.");
-                return false;
-            }
-            if (__instance.Entered.Contains(playerByCollider))
-            {
-                Plugin.PluginLogger.LogError("Player has already entered point.");
-                return false;
-            }
-            __instance.Entered.Add(playerByCollider);
-            __instance.Proceed(playerByCollider, false);
-
+            
+            __result = true;
             return false;
         }
     }
